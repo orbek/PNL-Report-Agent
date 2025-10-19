@@ -53,7 +53,8 @@ cache/
 logs/
 *.log
 reports/
-*.md
+reports/*.md
+anomaly_report_*.md
 cost_report_*.json
 
 # IDE

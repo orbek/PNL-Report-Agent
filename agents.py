@@ -26,6 +26,7 @@ from config import Config
 from database import Database
 from vector_store import VectorStoreManager
 from cost_tracker import CostTracker
+from security import RateLimiter, InputValidator
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,8 @@ class FinancialAgents:
         self.vector_store = VectorStoreManager(cost_tracker=cost_tracker)
         self.instructor_client = instructor.from_openai(OpenAI(api_key=Config.OPENAI_API_KEY))
         self.openai_client = OpenAI(api_key=Config.OPENAI_API_KEY)
+        # Initialize rate limiter (60 calls/min, 1000 calls/hour)
+        self.rate_limiter = RateLimiter(max_calls_per_minute=60, max_calls_per_hour=1000)
     
     # ========================================================================
     # AGENT 1: Data Ingestion & Structuring
@@ -272,6 +275,9 @@ Consider: Is this current variance part of a recurring pattern?
                 
                 # Track API call timing
                 start_time = time.time()
+                
+                # Apply rate limiting to prevent API abuse
+                self.rate_limiter.wait_if_needed()
                 
                 # Generate explanation with selected model
                 reasoning = self.instructor_client.chat.completions.create(

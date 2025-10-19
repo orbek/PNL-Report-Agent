@@ -439,7 +439,80 @@ Use accounting terminology. Be concise but thorough.
         # Word followed by number without space
         text = re.sub(r'([a-zA-Z])(\d+(?:,\d{3})*(?:\.\d{2})?)', r'\1 \2', text)
         
-        # camelCase
+        # Fix preposition + $ (e.g., "to$" -> "to $", "from$" -> "from $")
+        text = re.sub(r'\b(to|from|of|at|by|for|with)\$', r'\1 $', text)
+        
+        # Fix common word-to-word concatenations (more conservative approach)
+        # Only match when there are NO spaces between complete words
+        # Use negative lookbehind/lookahead to avoid splitting within words
+        
+        # Common short words that get concatenated with following words
+        # Articles (the, a, an) when followed by a capital or another word
+        text = re.sub(r'\bthe([A-Z][a-z]+)', r'the \1', text)  # camelCase: theAccount
+        text = re.sub(r'\ba([A-Z][a-z]+)', r'a \1', text)  # camelCase: aSignificant
+        text = re.sub(r'\ban([A-Z][a-z]+)', r'an \1', text)  # camelCase: anAccount
+        
+        # Specific common concatenations (whitelist approach to avoid false positives)
+        concatenations = [
+            # article + noun patterns
+            (r'\btheaccount\b', 'the account'),
+            (r'\bthemonth\b', 'the month'),
+            (r'\btheyear\b', 'the year'),
+            (r'\btheamount\b', 'the amount'),
+            (r'\bthebalance\b', 'the balance'),
+            (r'\bthetransaction\b', 'the transaction'),
+            (r'\bthevariance\b', 'the variance'),
+            (r'\bthethreshold\b', 'the threshold'),
+            (r'\btheanalysis\b', 'the analysis'),
+            (r'\btheexpense\b', 'the expense'),
+            (r'\basignificant\b', 'a significant'),
+            (r'\balarge\b', 'a large'),
+            (r'\basmall\b', 'a small'),
+            (r'\basingle\b', 'a single'),
+            (r'\basimilar\b', 'a similar'),
+            
+            # verb + auxiliary/adjective patterns (longer patterns first!)
+            (r'\baccounthasbeenflagged\b', 'account has been flagged'),
+            (r'\bhasbeenflagged\b', 'has been flagged'),
+            (r'\bhasbeen\b', 'has been'),
+            (r'\baccounthas\b', 'account has'),
+            (r'\baccountis\b', 'account is'),
+            (r'\bbalancehas\b', 'balance has'),
+            (r'\bbalanceis\b', 'balance is'),
+            (r'\bvariancehas\b', 'variance has'),
+            (r'\bvarianceis\b', 'variance is'),
+            
+            # adverb + verb patterns
+            (r'\btypicallyranges\b', 'typically ranges'),
+            (r'\btypicallyvaries\b', 'typically varies'),
+            (r'\btypicallyshows\b', 'typically shows'),
+            (r'\busuallyranges\b', 'usually ranges'),
+            (r'\busuallyshows\b', 'usually shows'),
+            (r'\bnotablyhas\b', 'notably has'),
+            (r'\bnotablyis\b', 'notably is'),
+            (r'\bnotablyhigher\b', 'notably higher'),
+            (r'\bnotablylower\b', 'notably lower'),
+            (r'\bsignificantlyhas\b', 'significantly has'),
+            (r'\bsignificantlyis\b', 'significantly is'),
+            (r'\bsignificantlyhigher\b', 'significantly higher'),
+            (r'\bsignificantlylower\b', 'significantly lower'),
+            
+            # preposition + article/word patterns
+            (r'\binthe\b', 'in the'),
+            (r'\bfromthe\b', 'from the'),
+            (r'\btothe\b', 'to the'),
+            (r'\bofthe\b', 'of the'),
+            (r'\batthe\b', 'at the'),
+            (r'\bforthe\b', 'for the'),
+            (r'\bwiththe\b', 'with the'),
+            (r'\bonthe\b', 'on the'),
+            (r'\bbythe\b', 'by the'),
+        ]
+        
+        for pattern, replacement in concatenations:
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+        
+        # camelCase (but be careful not to split abbreviations)
         text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
         
         # Fix specific financial terms (keep together)

@@ -1,0 +1,28 @@
+transaction_id,gl_account_id,date,amount,description,department,vendor
+TXN10001,4000,2025-11-15,72000.0,Monthly 4000 - November 2025,Operations,Vendor_4000
+TXN10002,4100,2025-11-15,55000.0,🔴 ANOMALY: Major enterprise consulting engagement - ABC Corp,Operations,Vendor_4100
+TXN10003,4200,2025-11-15,9200.0,Monthly 4200 - November 2025,Operations,Vendor_4200
+TXN10004,5000,2025-11-15,12500.0,Monthly 5000 - November 2025,Operations,Vendor_5000
+TXN10005,5100,2025-11-15,6500.0,"🔴 ANOMALY: Bulk order for new office expansion (chairs, desks, monitors)",Operations,Vendor_5100
+TXN10006,5200,2025-11-15,19000.0,🔴 ANOMALY: Annual enterprise license renewals + new tools,Operations,Vendor_5200
+TXN10007,5300,2025-11-15,3600.0,Monthly 5300 - November 2025,Operations,Vendor_5300
+TXN10008,5500,2025-11-15,87000.0,Monthly 5500 - November 2025,Operations,Vendor_5500
+TXN10009,5510,2025-11-15,13200.0,Monthly 5510 - November 2025,Operations,Vendor_5510
+TXN10010,5520,2025-11-15,18500.0,Monthly 5520 - November 2025,Operations,Vendor_5520
+TXN10011,5530,2025-11-15,28000.0,🟡 ANOMALY: 5 new contractors onboarded for Q4 projects,Operations,Vendor_5530
+TXN10012,6200,2025-11-15,4200.0,Monthly 6200 - November 2025,Operations,Vendor_6200
+TXN10013,6300,2025-11-15,8500.0,🔴 ANOMALY: Company-wide team building retreat - Lake Tahoe,Operations,Vendor_6300
+TXN10014,7100,2025-11-15,2400.0,Monthly 7100 - November 2025,Operations,Vendor_7100
+TXN10015,7200,2025-11-15,2100.0,Monthly 7200 - November 2025,Operations,Vendor_7200
+TXN10016,7300,2025-11-15,2250.0,Monthly 7300 - November 2025,Operations,Vendor_7300
+TXN10017,8000,2025-11-15,18000.0,🟡 ANOMALY: Black Friday / Cyber Monday marketing blitz,Operations,Vendor_8000
+TXN10018,8100,2025-11-15,5800.0,Monthly 8100 - November 2025,Operations,Vendor_8100
+TXN10019,8200,2025-11-15,0.01,🔴 ANOMALY: No trade shows scheduled this month (vs typical $5K) - minimal admin cost,Operations,Vendor_8200
+TXN10020,9000,2025-11-15,5200.0,Monthly 9000 - November 2025,Operations,Vendor_9000
+TXN10021,9100,2025-11-15,4500.0,Monthly 9100 - November 2025,Operations,Vendor_9100
+TXN10022,9200,2025-11-15,7500.0,Monthly 9200 - November 2025,Operations,Vendor_9200
+TXN10023,3000,2025-11-15,22000.0,Monthly 3000 - November 2025,Operations,Vendor_3000
+TXN10024,3100,2025-11-15,12500.0,Monthly 3100 - November 2025,Operations,Vendor_3100
+TXN10025,9500,2025-11-15,250.0,🟡 ANOMALY: Switched banks - lower merchant fees,Operations,Vendor_9500
+TXN10026,9600,2025-11-15,3500.0,Monthly 9600 - November 2025,Operations,Vendor_9600
+TXN10027,9700,2025-11-15,15000.0,🔴 ANOMALY: Year-end corporate giving campaign ($15K to local schools),Operations,Vendor_9700

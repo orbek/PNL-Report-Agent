@@ -1,0 +1,48 @@
+# ============================================================================
+# Financial P&L Anomaly Detection Agent - Minimal Requirements
+# Python 3.10 compatible
+# ============================================================================
+
+# Core LLM and orchestration
+langchain==0.3.27
+langchain-openai==0.2.13
+langchain-core
+langchain_community
+langgraph
+tiktoken
+
+# OpenAI client
+openai==1.106.1
+
+# Structured outputs
+instructor
+
+# Data processing
+pandas
+numpy
+python-dotenv==1.0.1
+
+# Vector store (choose one)
+chromadb
+# OR for lighter install:
+# faiss-cpu
+
+# Evaluation (optional - comment out for faster install)
+ragas
+
+# Database (SQLite built-in, PostgreSQL optional)
+# psycopg2-binary  # Uncomment for PostgreSQL support
+
+# Optional: External search APIs (comment out if not using)
+# tavily-python
+# exa_py==1.7.0
+
+# Optional: Long-term memory (comment out if not using)
+# zep-python
+
+# Optional: Time series forecasting (comment out for MVP)
+# torch
+# chronos-forecasting @ git+https://github.com/amazon-science/chronos-forecasting.git
+
+# Utility
+markdown  # For HTML report generation

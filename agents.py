@@ -36,18 +36,24 @@ class FinancialAgents:
     """Collection of specialized agents for financial analysis"""
     
     # Class-level constants for text cleaning (ordered by length descending)
+    # Note: Patterns are applied in order, so longer patterns must come first
+    # to prevent shorter patterns from matching parts of longer concatenations
     TEXT_CONCATENATION_PATTERNS = [
-        # Longest patterns first to prevent partial matches
+        # === Multi-word Financial Phrases (20+ chars) ===
         (r'\baccounthasbeenflagged\b', 'account has been flagged'),
         (r'\btypicalmonthlyrangeof\b', 'typical monthly range of'),
-        (r'\bisalsowellabovethe\b', ' is also well above the '),
-        (r'\bisalsowellbelowthe\b', ' is also well below the '),
+        (r'\bisalsowellabovethe\b', 'is also well above the'),
+        (r'\bisalsowellbelowthe\b', 'is also well below the'),
+        
+        # === Financial Comparisons (15-19 chars) ===
         (r'\bsignificantlyhigher\b', 'significantly higher'),
         (r'\bsignificantlylower\b', 'significantly lower'),
-        (r'\biswellabovethe\b', ' is well above the '),
-        (r'\biswellbelowthe\b', ' is well below the '),
-        (r'\bisalsoabovethe\b', ' is also above the '),
-        (r'\bisalsobelowthe\b', ' is also below the '),
+        (r'\biswellabovethe\b', 'is well above the'),
+        (r'\biswellbelowthe\b', 'is well below the'),
+        (r'\bisalsoabovethe\b', 'is also above the'),
+        (r'\bisalsobelowthe\b', 'is also below the'),
+        
+        # === Verb + Auxiliary Phrases (12-14 chars) ===
         (r'\bhasbeenflagged\b', 'has been flagged'),
         (r'\btypicallyranges\b', 'typically ranges'),
         (r'\btypicallyvaries\b', 'typically varies'),
@@ -61,16 +67,19 @@ class FinancialAgents:
         (r'\bsignificantlyis\b', 'significantly is'),
         (r'\bthetransaction\b', 'the transaction'),
         (r'\bthethreshold\b', 'the threshold'),
+        
+        # === Article + Noun Combinations (11-12 chars) ===
         (r'\btheanalysis\b', 'the analysis'),
-        (r'\btypicalrange\b', ' typical range'),
+        (r'\btypicalrange\b', 'typical range'),
         (r'\bthevariance\b', 'the variance'),
         (r'\bthebalance\b', 'the balance'),
         (r'\btheexpense\b', 'the expense'),
         (r'\btheaccount\b', 'the account'),
-        (r'\btheamount\b', 'the amount'),
-        (r'\bisabovethe\b', ' is above the '),
-        (r'\bisbelowthe\b', ' is below the '),
         (r'\basignificant\b', 'a significant'),
+        
+        # === Verb + Object Patterns (10-11 chars) ===
+        (r'\bisabovethe\b', 'is above the'),
+        (r'\bisbelowthe\b', 'is below the'),
         (r'\baccounthas\b', 'account has'),
         (r'\baccountis\b', 'account is'),
         (r'\bbalancehas\b', 'balance has'),
@@ -79,27 +88,32 @@ class FinancialAgents:
         (r'\bvarianceis\b', 'variance is'),
         (r'\bnotablyhas\b', 'notably has'),
         (r'\bnotablyis\b', 'notably is'),
-        (r'\bwellabove\b', ' well above '),
-        (r'\bwellbelow\b', ' well below '),
-        (r'\bwellwithin\b', ' well within '),
-        (r'\bwelloutside\b', ' well outside '),
+        (r'\bwellabove\b', 'well above'),
+        (r'\bwellbelow\b', 'well below'),
+        (r'\bwellwithin\b', 'well within'),
+        (r'\bwelloutside\b', 'well outside'),
+        
+        # === Short Article + Noun (8-9 chars) ===
         (r'\brasimilar\b', 'a similar'),
         (r'\bthemonth\b', 'the month'),
-        (r'\btheyear\b', 'the year'),
+        (r'\btheamount\b', 'the amount'),
         (r'\brasingle\b', 'a single'),
-        (r'\brangeof\b', ' range of '),
+        (r'\brangeof\b', 'range of'),
         (r'\bhasbeen\b', 'has been'),
         (r'\balarge\b', 'a large'),
         (r'\basmall\b', 'a small'),
-        (r'\bisalso\b', ' is also '),
-        (r'\biswell\b', ' is well '),
+        (r'\bisalso\b', 'is also'),
+        (r'\biswell\b', 'is well'),
+        (r'\btheyear\b', 'the year'),
+        
+        # === Preposition + Article (5-7 chars) ===
         (r'\bfromthe\b', 'from the'),
+        (r'\bwiththe\b', 'with the'),
         (r'\binthe\b', 'in the'),
         (r'\btothe\b', 'to the'),
         (r'\bofthe\b', 'of the'),
         (r'\batthe\b', 'at the'),
         (r'\bforthe\b', 'for the'),
-        (r'\bwiththe\b', 'with the'),
         (r'\bonthe\b', 'on the'),
         (r'\bbythe\b', 'by the'),
     ]

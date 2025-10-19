@@ -34,6 +34,75 @@ logger = logging.getLogger(__name__)
 class FinancialAgents:
     """Collection of specialized agents for financial analysis"""
     
+    # Class-level constants for text cleaning (ordered by length descending)
+    TEXT_CONCATENATION_PATTERNS = [
+        # Longest patterns first to prevent partial matches
+        (r'\baccounthasbeenflagged\b', 'account has been flagged'),
+        (r'\btypicalmonthlyrangeof\b', 'typical monthly range of'),
+        (r'\bisalsowellabovethe\b', ' is also well above the '),
+        (r'\bisalsowellbelowthe\b', ' is also well below the '),
+        (r'\bsignificantlyhigher\b', 'significantly higher'),
+        (r'\bsignificantlylower\b', 'significantly lower'),
+        (r'\biswellabovethe\b', ' is well above the '),
+        (r'\biswellbelowthe\b', ' is well below the '),
+        (r'\bisalsoabovethe\b', ' is also above the '),
+        (r'\bisalsobelowthe\b', ' is also below the '),
+        (r'\bhasbeenflagged\b', 'has been flagged'),
+        (r'\btypicallyranges\b', 'typically ranges'),
+        (r'\btypicallyvaries\b', 'typically varies'),
+        (r'\btypicallyshows\b', 'typically shows'),
+        (r'\bmonthlyrangeof\b', 'monthly range of'),
+        (r'\busuallyranges\b', 'usually ranges'),
+        (r'\busuallyshows\b', 'usually shows'),
+        (r'\bnotablyhigher\b', 'notably higher'),
+        (r'\bnotablylower\b', 'notably lower'),
+        (r'\bsignificantlyhas\b', 'significantly has'),
+        (r'\bsignificantlyis\b', 'significantly is'),
+        (r'\bthetransaction\b', 'the transaction'),
+        (r'\bthethreshold\b', 'the threshold'),
+        (r'\btheanalysis\b', 'the analysis'),
+        (r'\btypicalrange\b', ' typical range'),
+        (r'\bthevariance\b', 'the variance'),
+        (r'\bthebalance\b', 'the balance'),
+        (r'\btheexpense\b', 'the expense'),
+        (r'\btheaccount\b', 'the account'),
+        (r'\btheamount\b', 'the amount'),
+        (r'\bisabovethe\b', ' is above the '),
+        (r'\bisbelowthe\b', ' is below the '),
+        (r'\basignificant\b', 'a significant'),
+        (r'\baccounthas\b', 'account has'),
+        (r'\baccountis\b', 'account is'),
+        (r'\bbalancehas\b', 'balance has'),
+        (r'\bbalanceis\b', 'balance is'),
+        (r'\bvariancehas\b', 'variance has'),
+        (r'\bvarianceis\b', 'variance is'),
+        (r'\bnotablyhas\b', 'notably has'),
+        (r'\bnotablyis\b', 'notably is'),
+        (r'\bwellabove\b', ' well above '),
+        (r'\bwellbelow\b', ' well below '),
+        (r'\bwellwithin\b', ' well within '),
+        (r'\bwelloutside\b', ' well outside '),
+        (r'\brasimilar\b', 'a similar'),
+        (r'\bthemonth\b', 'the month'),
+        (r'\btheyear\b', 'the year'),
+        (r'\brasingle\b', 'a single'),
+        (r'\brangeof\b', ' range of '),
+        (r'\bhasbeen\b', 'has been'),
+        (r'\balarge\b', 'a large'),
+        (r'\basmall\b', 'a small'),
+        (r'\bisalso\b', ' is also '),
+        (r'\biswell\b', ' is well '),
+        (r'\bfromthe\b', 'from the'),
+        (r'\binthe\b', 'in the'),
+        (r'\btothe\b', 'to the'),
+        (r'\bofthe\b', 'of the'),
+        (r'\batthe\b', 'at the'),
+        (r'\bforthe\b', 'for the'),
+        (r'\bwiththe\b', 'with the'),
+        (r'\bonthe\b', 'on the'),
+        (r'\bbythe\b', 'by the'),
+    ]
+    
     def __init__(self, model: str = None, cost_tracker: Optional[CostTracker] = None):
         self.model = model or Config.DEFAULT_MODEL
         self.cost_tracker = cost_tracker
@@ -43,6 +112,13 @@ class FinancialAgents:
         self.openai_client = OpenAI(api_key=Config.OPENAI_API_KEY)
         # Initialize rate limiter (60 calls/min, 1000 calls/hour)
         self.rate_limiter = RateLimiter(max_calls_per_minute=60, max_calls_per_hour=1000)
+        
+        # Pre-compile regex patterns for better performance
+        import re
+        self._compiled_patterns = [
+            (re.compile(pattern, re.IGNORECASE), replacement) 
+            for pattern, replacement in self.TEXT_CONCATENATION_PATTERNS
+        ]
     
     # ========================================================================
     # AGENT 1: Data Ingestion & Structuring
@@ -410,29 +486,6 @@ Use accounting terminology. Be concise but thorough.
         """Clean up concatenated text by adding proper spaces"""
         import re
         
-        # Fix concatenated phrases in order (most specific first)
-        # Common financial phrases
-        text = re.sub(r'isalsowellabovethe', ' is also well above the ', text)
-        text = re.sub(r'isalsowellbelowthe', ' is also well below the ', text)
-        text = re.sub(r'iswellabovethe', ' is well above the ', text)
-        text = re.sub(r'iswellbelowthe', ' is well below the ', text)
-        text = re.sub(r'isalsoabovethe', ' is also above the ', text)
-        text = re.sub(r'isalsobelowthe', ' is also below the ', text)
-        text = re.sub(r'isabovethe', ' is above the ', text)
-        text = re.sub(r'isbelowthe', ' is below the ', text)
-        text = re.sub(r'typicalmonthlyrangeof', ' typical monthly range of ', text)
-        text = re.sub(r'monthlyrangeof', ' monthly range of ', text)
-        text = re.sub(r'typicalrange', ' typical range', text)
-        text = re.sub(r'rangeof', ' range of ', text)
-        
-        # Common concatenated words
-        text = re.sub(r'isalso', ' is also ', text)
-        text = re.sub(r'iswell', ' is well ', text)
-        text = re.sub(r'wellabove', ' well above ', text)
-        text = re.sub(r'wellbelow', ' well below ', text)
-        text = re.sub(r'wellwithin', ' well within ', text)
-        text = re.sub(r'welloutside', ' well outside ', text)
-        
         # Number followed by word without space (e.g., "8,500.00is" -> "8,500.00 is")
         text = re.sub(r'(\d+(?:,\d{3})*(?:\.\d{2})?)([a-zA-Z])', r'\1 \2', text)
         
@@ -442,75 +495,14 @@ Use accounting terminology. Be concise but thorough.
         # Fix preposition + $ (e.g., "to$" -> "to $", "from$" -> "from $")
         text = re.sub(r'\b(to|from|of|at|by|for|with)\$', r'\1 $', text)
         
-        # Fix common word-to-word concatenations (more conservative approach)
-        # Only match when there are NO spaces between complete words
-        # Use negative lookbehind/lookahead to avoid splitting within words
-        
-        # Common short words that get concatenated with following words
-        # Articles (the, a, an) when followed by a capital or another word
+        # camelCase (the, a, an followed by capital letter)
         text = re.sub(r'\bthe([A-Z][a-z]+)', r'the \1', text)  # camelCase: theAccount
         text = re.sub(r'\ba([A-Z][a-z]+)', r'a \1', text)  # camelCase: aSignificant
         text = re.sub(r'\ban([A-Z][a-z]+)', r'an \1', text)  # camelCase: anAccount
         
-        # Specific common concatenations (whitelist approach to avoid false positives)
-        concatenations = [
-            # article + noun patterns
-            (r'\btheaccount\b', 'the account'),
-            (r'\bthemonth\b', 'the month'),
-            (r'\btheyear\b', 'the year'),
-            (r'\btheamount\b', 'the amount'),
-            (r'\bthebalance\b', 'the balance'),
-            (r'\bthetransaction\b', 'the transaction'),
-            (r'\bthevariance\b', 'the variance'),
-            (r'\bthethreshold\b', 'the threshold'),
-            (r'\btheanalysis\b', 'the analysis'),
-            (r'\btheexpense\b', 'the expense'),
-            (r'\basignificant\b', 'a significant'),
-            (r'\balarge\b', 'a large'),
-            (r'\basmall\b', 'a small'),
-            (r'\basingle\b', 'a single'),
-            (r'\basimilar\b', 'a similar'),
-            
-            # verb + auxiliary/adjective patterns (longer patterns first!)
-            (r'\baccounthasbeenflagged\b', 'account has been flagged'),
-            (r'\bhasbeenflagged\b', 'has been flagged'),
-            (r'\bhasbeen\b', 'has been'),
-            (r'\baccounthas\b', 'account has'),
-            (r'\baccountis\b', 'account is'),
-            (r'\bbalancehas\b', 'balance has'),
-            (r'\bbalanceis\b', 'balance is'),
-            (r'\bvariancehas\b', 'variance has'),
-            (r'\bvarianceis\b', 'variance is'),
-            
-            # adverb + verb patterns
-            (r'\btypicallyranges\b', 'typically ranges'),
-            (r'\btypicallyvaries\b', 'typically varies'),
-            (r'\btypicallyshows\b', 'typically shows'),
-            (r'\busuallyranges\b', 'usually ranges'),
-            (r'\busuallyshows\b', 'usually shows'),
-            (r'\bnotablyhas\b', 'notably has'),
-            (r'\bnotablyis\b', 'notably is'),
-            (r'\bnotablyhigher\b', 'notably higher'),
-            (r'\bnotablylower\b', 'notably lower'),
-            (r'\bsignificantlyhas\b', 'significantly has'),
-            (r'\bsignificantlyis\b', 'significantly is'),
-            (r'\bsignificantlyhigher\b', 'significantly higher'),
-            (r'\bsignificantlylower\b', 'significantly lower'),
-            
-            # preposition + article/word patterns
-            (r'\binthe\b', 'in the'),
-            (r'\bfromthe\b', 'from the'),
-            (r'\btothe\b', 'to the'),
-            (r'\bofthe\b', 'of the'),
-            (r'\batthe\b', 'at the'),
-            (r'\bforthe\b', 'for the'),
-            (r'\bwiththe\b', 'with the'),
-            (r'\bonthe\b', 'on the'),
-            (r'\bbythe\b', 'by the'),
-        ]
-        
-        for pattern, replacement in concatenations:
-            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+        # Apply pre-compiled concatenation patterns (ordered by length descending)
+        for compiled_pattern, replacement in self._compiled_patterns:
+            text = compiled_pattern.sub(replacement, text)
         
         # camelCase (but be careful not to split abbreviations)
         text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)

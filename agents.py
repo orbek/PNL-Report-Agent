@@ -1,6 +1,6 @@
 """
 Core Agent Implementations for Financial P&L Anomaly Detection
-4 Specialized Agents: Ingestion → Detection → Retrieval → Reporting
+5 Specialized Agents: Ingestion → Detection → Retrieval → Reporting → Formatting
 """
 
 import pandas as pd
@@ -403,6 +403,135 @@ Use accounting terminology. Be concise but thorough.
             }
     
     # ========================================================================
+    # AGENT 5: Report Formatting & Text Cleanup
+    # ========================================================================
+    
+    def format_report(self, state: FinancialAnalysisState) -> FinancialAnalysisState:
+        """
+        Agent 5: Fix any spacing, formatting, or text concatenation issues in generated explanations
+        Uses GPT-4o-mini for cost-effective post-processing
+        """
+        logger.info("✨ Agent 5: Starting report formatting...")
+        
+        try:
+            # Use GPT-4o-mini for cost-effective formatting
+            format_config = Config.get_llm_config("formatting", "gpt-4o-mini")
+            
+            formatted_explanations = []
+            
+            for explanation in state["explanations"]:
+                # Track API call timing
+                start_time = time.time()
+                
+                # Apply rate limiting
+                self.rate_limiter.wait_if_needed()
+                
+                # Create formatting prompt
+                formatting_prompt = f"""
+Fix any text spacing, concatenation, or formatting issues in the following financial analysis text.
+
+RULES:
+1. Add proper spaces between concatenated words (e.g., "accounthas" → "account has")
+2. Fix number-word concatenations (e.g., "$8,500.00is" → "$8,500.00 is")
+3. Ensure proper spacing around punctuation
+4. Keep all numbers, percentages, and financial data exactly as they are
+5. Maintain the professional tone and technical accuracy
+6. Do NOT change the meaning or content, only fix spacing/formatting
+
+TEXT TO FIX:
+
+**Root Cause**: {explanation.reasoning.root_cause}
+
+**Chain of Thought**: {explanation.reasoning.chain_of_thought}
+
+**Recommendation**: {explanation.reasoning.recommendation}
+
+**Supporting Evidence**: {', '.join(explanation.reasoning.supporting_evidence) if explanation.reasoning.supporting_evidence else 'None'}
+
+Return the corrected text in the same format, maintaining the structure but with proper spacing.
+"""
+                
+                # Call GPT-4o-mini to fix formatting
+                response = self.openai_client.chat.completions.create(
+                    model=format_config["model"],
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are a text formatting specialist. Fix spacing and concatenation issues in financial text while preserving all data and meaning. Return only the corrected text in the same format."
+                        },
+                        {
+                            "role": "user",
+                            "content": formatting_prompt
+                        }
+                    ],
+                    temperature=format_config["temperature"],
+                    max_tokens=format_config["max_tokens"]
+                )
+                
+                # Parse the formatted response
+                formatted_text = response.choices[0].message.content.strip()
+                
+                # Extract the formatted sections (simple parsing)
+                import re
+                
+                # Extract each section
+                root_cause_match = re.search(r'\*\*Root Cause\*\*:\s*(.+?)(?=\n\*\*|$)', formatted_text, re.DOTALL)
+                chain_match = re.search(r'\*\*Chain of Thought\*\*:\s*(.+?)(?=\n\*\*|$)', formatted_text, re.DOTALL)
+                recommendation_match = re.search(r'\*\*Recommendation\*\*:\s*(.+?)(?=\n\*\*|$)', formatted_text, re.DOTALL)
+                evidence_match = re.search(r'\*\*Supporting Evidence\*\*:\s*(.+?)(?=\n\*\*|$)', formatted_text, re.DOTALL)
+                
+                # Update the reasoning with formatted text
+                if root_cause_match:
+                    explanation.reasoning.root_cause = root_cause_match.group(1).strip()
+                if chain_match:
+                    explanation.reasoning.chain_of_thought = chain_match.group(1).strip()
+                if recommendation_match:
+                    explanation.reasoning.recommendation = recommendation_match.group(1).strip()
+                if evidence_match:
+                    evidence_text = evidence_match.group(1).strip()
+                    if evidence_text and evidence_text.lower() != 'none':
+                        # Parse comma-separated evidence
+                        explanation.reasoning.supporting_evidence = [e.strip() for e in evidence_text.split(',')]
+                
+                formatted_explanations.append(explanation)
+                
+                # Calculate call duration
+                call_duration = time.time() - start_time
+                
+                # Track cost
+                if self.cost_tracker:
+                    usage = response.usage
+                    query_preview = f"Format text for GL Account {explanation.anomaly.gl_account_id}"
+                    
+                    self.cost_tracker.track_call(
+                        model=format_config["model"],
+                        agent="formatting",
+                        input_tokens=usage.prompt_tokens,
+                        output_tokens=usage.completion_tokens,
+                        call_duration=call_duration,
+                        query_preview=query_preview
+                    )
+                
+                logger.info(f"✅ Formatted explanation for {explanation.anomaly.gl_account_id}")
+            
+            logger.info(f"✅ Agent 5 complete: Formatted {len(formatted_explanations)} explanations")
+            
+            return {
+                **state,
+                "explanations": formatted_explanations,
+                "current_step": "formatting_complete"
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Agent 5 failed: {e}")
+            # If formatting fails, return original explanations
+            logger.warning("⚠️  Formatting failed, using original explanations")
+            return {
+                **state,
+                "current_step": "formatting_failed"
+            }
+    
+    # ========================================================================
     # Helper Methods
     # ========================================================================
     
@@ -515,4 +644,10 @@ def reporting_agent(state: FinancialAnalysisState) -> FinancialAnalysisState:
     """LangGraph node: Explanation generation"""
     agents = FinancialAgents()
     return agents.generate_explanations(state)
+
+
+def formatting_agent(state: FinancialAnalysisState) -> FinancialAnalysisState:
+    """LangGraph node: Report formatting and text cleanup"""
+    agents = FinancialAgents()
+    return agents.format_report(state)
 

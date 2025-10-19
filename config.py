@@ -53,6 +53,7 @@ class Config:
     GPT5_REASONING_DETECTION = os.getenv("GPT5_REASONING_DETECTION", "medium")
     GPT5_REASONING_RETRIEVAL = os.getenv("GPT5_REASONING_RETRIEVAL", "low")
     GPT5_REASONING_REPORTING = os.getenv("GPT5_REASONING_REPORTING", "high")
+    GPT5_REASONING_FORMATTING = os.getenv("GPT5_REASONING_FORMATTING", "low")  # Agent 5
     
     # Temperature settings
     GPT5_TEMP_STRUCTURED = float(os.getenv("GPT5_TEMP_STRUCTURED", "0.0"))
@@ -63,6 +64,7 @@ class Config:
     GPT5_MAX_TOKENS_DETECTION = int(os.getenv("GPT5_MAX_TOKENS_DETECTION", "1500"))
     GPT5_MAX_TOKENS_RETRIEVAL = int(os.getenv("GPT5_MAX_TOKENS_RETRIEVAL", "1000"))
     GPT5_MAX_TOKENS_REPORTING = int(os.getenv("GPT5_MAX_TOKENS_REPORTING", "4000"))
+    GPT5_MAX_TOKENS_FORMATTING = int(os.getenv("GPT5_MAX_TOKENS_FORMATTING", "2000"))  # Agent 5
     
     # ========================================================================
     # Anomaly Detection Parameters
@@ -238,6 +240,12 @@ Loop: Detect → Retrieve → Report. No iteration.
                 "reasoning_effort": cls.GPT5_REASONING_REPORTING,
                 "max_tokens": cls.GPT5_MAX_TOKENS_REPORTING,
                 "temperature": cls.GPT5_TEMP_CREATIVE
+            },
+            "formatting": {
+                "model": "gpt-4o-mini",  # Always use GPT-4o-mini for cost-effective formatting
+                "reasoning_effort": cls.GPT5_REASONING_FORMATTING,
+                "max_tokens": cls.GPT5_MAX_TOKENS_FORMATTING,
+                "temperature": cls.GPT5_TEMP_STRUCTURED
             }
         }
         

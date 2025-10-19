@@ -15,6 +15,7 @@ import pandas as pd
 import time
 
 from config import Config
+from cache import get_cache
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ class VectorStoreManager:
         self.collection_name = Config.CHROMA_COLLECTION_NAME
         self.embedding_model = Config.EMBEDDING_MODEL
         self.cost_tracker = cost_tracker
+        self.cache = get_cache()
         
         self.embeddings = OpenAIEmbeddings(
             model=self.embedding_model,
@@ -133,6 +135,13 @@ class VectorStoreManager:
             List of relevant Document objects
         """
         try:
+            # Check cache first
+            cache_key_params = {"query": query, "account_id": account_id, "k": k}
+            cached_docs = self.cache.get("vector", **cache_key_params)
+            if cached_docs is not None:
+                logger.info(f"Using cached vector search result for query: {query[:50]}...")
+                return cached_docs
+            
             # Track embedding cost
             start_time = time.time()
             
@@ -145,6 +154,9 @@ class VectorStoreManager:
                 )
             else:
                 docs = self.vectorstore.similarity_search(query, k=k)
+            
+            # Cache the results (TTL: 1 hour for vector searches)
+            self.cache.set(docs, "vector", ttl=3600, **cache_key_params)
             
             call_duration = time.time() - start_time
             

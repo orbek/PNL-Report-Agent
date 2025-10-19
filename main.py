@@ -15,6 +15,7 @@ from database import init_database
 from vector_store import VectorStoreManager, build_initial_gl_knowledge_base
 from workflow import FinancialAnomalyWorkflow
 from sample_data_generator import create_sample_data_files
+from security import InputValidator, validate_security_config
 import pandas as pd
 
 # Setup logging
@@ -76,10 +77,11 @@ def cmd_init(args):
 
 def cmd_analyze(args):
     """Run anomaly detection analysis"""
-    pl_path = Path(args.pl_file)
-    
-    if not pl_path.exists():
-        print(f"❌ P&L file not found: {pl_path}")
+    # Validate file path for security
+    try:
+        pl_path = InputValidator.validate_file_path(args.pl_file, allowed_extensions=['.csv'])
+    except ValueError as e:
+        print(f"❌ Invalid file path: {e}")
         sys.exit(1)
     
     print("=" * 80)
@@ -88,7 +90,14 @@ def cmd_analyze(args):
     
     # Determine target month
     target_month = args.month
-    if not target_month:
+    if target_month:
+        # Validate month format
+        try:
+            target_month = InputValidator.validate_month_format(target_month)
+        except ValueError as e:
+            print(f"❌ Invalid month format: {e}")
+            sys.exit(1)
+    else:
         # Auto-detect from filename or data
         df = pd.read_csv(pl_path)
         target_month = pd.to_datetime(df['date']).max().strftime('%Y-%m')
@@ -214,6 +223,9 @@ def cmd_stats(args):
 
 def main():
     """Main CLI entry point"""
+    # Validate security configuration on startup
+    validate_security_config()
+    
     parser = argparse.ArgumentParser(
         description="Financial P&L Anomaly Detection Agent",
         formatter_class=argparse.RawDescriptionHelpFormatter,

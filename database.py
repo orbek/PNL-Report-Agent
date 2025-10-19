@@ -198,29 +198,45 @@ class Database:
         If target_month is None, aggregates ALL months (for initial load)
         """
         conn = self.get_connection()
+        cur = conn.cursor()
         
         # Aggregate transactions into monthly balances
         if target_month:
-            # Single month update
-            where_clause = f"WHERE SUBSTR(transaction_date, 1, 7) = '{target_month}'"
+            # Validate target_month format to prevent SQL injection
+            try:
+                datetime.strptime(f"{target_month}-01", "%Y-%m-%d")
+            except ValueError:
+                raise ValueError(f"Invalid target_month format: {target_month}. Expected YYYY-MM")
+            
+            # Single month update with parameterized query
+            query = """
+                INSERT OR REPLACE INTO gl_monthly_balances 
+                (gl_account_id, month, net_balance, transaction_count)
+                SELECT 
+                    gl_account_id,
+                    DATE(SUBSTR(transaction_date, 1, 7) || '-01') as month,
+                    SUM(amount) as net_balance,
+                    COUNT(*) as transaction_count
+                FROM pl_transactions
+                WHERE SUBSTR(transaction_date, 1, 7) = ?
+                GROUP BY gl_account_id, month
+            """
+            cur.execute(query, (target_month,))
         else:
             # Aggregate all months (initial load)
-            where_clause = ""
+            query = """
+                INSERT OR REPLACE INTO gl_monthly_balances 
+                (gl_account_id, month, net_balance, transaction_count)
+                SELECT 
+                    gl_account_id,
+                    DATE(SUBSTR(transaction_date, 1, 7) || '-01') as month,
+                    SUM(amount) as net_balance,
+                    COUNT(*) as transaction_count
+                FROM pl_transactions
+                GROUP BY gl_account_id, month
+            """
+            cur.execute(query)
         
-        query = f"""
-            INSERT OR REPLACE INTO gl_monthly_balances 
-            (gl_account_id, month, net_balance, transaction_count)
-            SELECT 
-                gl_account_id,
-                DATE(SUBSTR(transaction_date, 1, 7) || '-01') as month,
-                SUM(amount) as net_balance,
-                COUNT(*) as transaction_count
-            FROM pl_transactions
-            {where_clause}
-            GROUP BY gl_account_id, month
-        """
-        
-        conn.execute(query)
         conn.commit()
         
         # Calculate variance vs previous month for ALL accounts/months
@@ -280,9 +296,19 @@ class Database:
         if threshold_pct is None:
             threshold_pct = Config.ANOMALY_THRESHOLD_MEDIUM
         
+        # Validate inputs to prevent SQL injection
+        try:
+            datetime.strptime(f"{target_month}-01", "%Y-%m-%d")
+        except ValueError:
+            raise ValueError(f"Invalid target_month format: {target_month}. Expected YYYY-MM")
+        
+        if not isinstance(threshold_pct, (int, float)) or threshold_pct < 0:
+            raise ValueError(f"Invalid threshold_pct: {threshold_pct}")
+        
         conn = self.get_connection()
         
-        query = f"""
+        # Use parameterized query to prevent SQL injection
+        query = """
             SELECT 
                 b.gl_account_id,
                 a.account_name,
@@ -296,8 +322,8 @@ class Database:
                 b.rolling_6mo_std,
                 a.typical_min || '-' || a.typical_max as typical_range,
                 CASE
-                    WHEN ABS(b.variance_percent) > {Config.ANOMALY_THRESHOLD_HIGH} THEN 'high'
-                    WHEN ABS(b.variance_percent) > {Config.ANOMALY_THRESHOLD_MEDIUM} THEN 'medium'
+                    WHEN ABS(b.variance_percent) > ? THEN 'high'
+                    WHEN ABS(b.variance_percent) > ? THEN 'medium'
                     ELSE 'low'
                 END as severity,
                 CASE
@@ -312,13 +338,13 @@ class Database:
                 ) as past_anomaly_count
             FROM gl_monthly_balances b
             JOIN gl_accounts a ON b.gl_account_id = a.account_id
-            WHERE SUBSTR(b.month, 1, 7) = '{target_month}'
+            WHERE SUBSTR(b.month, 1, 7) = ?
               AND b.variance_percent IS NOT NULL
-              AND ABS(b.variance_percent) >= {threshold_pct}
+              AND ABS(b.variance_percent) >= ?
             ORDER BY ABS(b.variance_percent) DESC
         """
         
-        df = pd.read_sql_query(query, conn)
+        df = pd.read_sql_query(query, conn, params=(Config.ANOMALY_THRESHOLD_HIGH, Config.ANOMALY_THRESHOLD_MEDIUM, target_month, threshold_pct))
         conn.close()
         
         # Calculate previous month

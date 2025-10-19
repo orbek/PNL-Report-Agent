@@ -37,8 +37,10 @@ class FinancialAgents:
     
     # Class-level constants for text cleaning (ordered by length descending)
     # Note: Patterns are applied in order, so longer patterns must come first
-    # to prevent shorter patterns from matching parts of longer concatenations
-    TEXT_CONCATENATION_PATTERNS = [
+    # to prevent shorter patterns from matching parts of longer concatenations.
+    # The \b word boundaries handle spacing automatically, so replacements
+    # don't need leading/trailing spaces.
+    TEXT_CONCATENATION_PATTERNS = (
         # === Multi-word Financial Phrases (20+ chars) ===
         (r'\baccounthasbeenflagged\b', 'account has been flagged'),
         (r'\btypicalmonthlyrangeof\b', 'typical monthly range of'),
@@ -116,7 +118,7 @@ class FinancialAgents:
         (r'\bforthe\b', 'for the'),
         (r'\bonthe\b', 'on the'),
         (r'\bbythe\b', 'by the'),
-    ]
+    )
     
     def __init__(self, model: str = None, cost_tracker: Optional[CostTracker] = None):
         self.model = model or Config.DEFAULT_MODEL

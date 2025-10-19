@@ -8,6 +8,7 @@ from openai import OpenAI
 from typing import List, Optional
 import logging
 import time
+import re
 
 try:
     import instructor
@@ -114,7 +115,6 @@ class FinancialAgents:
         self.rate_limiter = RateLimiter(max_calls_per_minute=60, max_calls_per_hour=1000)
         
         # Pre-compile regex patterns for better performance
-        import re
         self._compiled_patterns = [
             (re.compile(pattern, re.IGNORECASE), replacement) 
             for pattern, replacement in self.TEXT_CONCATENATION_PATTERNS
@@ -484,8 +484,6 @@ Use accounting terminology. Be concise but thorough.
     
     def clean_text_spacing(self, text: str) -> str:
         """Clean up concatenated text by adding proper spaces"""
-        import re
-        
         # Number followed by word without space (e.g., "8,500.00is" -> "8,500.00 is")
         text = re.sub(r'(\d+(?:,\d{3})*(?:\.\d{2})?)([a-zA-Z])', r'\1 \2', text)
         

@@ -92,7 +92,7 @@ python main.py analyze data/pl_historical.csv --month 2025-03 --model gpt-4o
 
 ## 🏗️ Agent Architecture
 
-The system uses a **4-Agent LangGraph Workflow**:
+The system uses a **5-Agent LangGraph Workflow**:
 
 ### System Architecture Flowchart
 
@@ -119,11 +119,12 @@ flowchart TD
     D2 --> D3[💰 Initialize Cost Tracker]
     D3 --> D4[🔄 Execute LangGraph Workflow]
     
-    %% LangGraph Workflow - 4 Agents
+    %% LangGraph Workflow - 5 Agents
     D4 --> E1[🤖 Agent 1: Data Ingestion]
     E1 --> E2[🤖 Agent 2: Anomaly Detection]
     E2 --> E3[🤖 Agent 3: Context Retrieval]
     E3 --> E4[🤖 Agent 4: Report Generation]
+    E4 --> E5[🤖 Agent 5: Report Formatting]
     
     %% Agent 1: Data Ingestion
     E1 --> E1A[📂 Load P&L CSV<br/>pandas.read_csv]
@@ -148,17 +149,23 @@ flowchart TD
     %% Agent 4: Report Generation
     E4 --> E4A[🤖 For Each Anomaly]
     E4A --> E4B[📝 Generate Explanation<br/>GPT-4/4o/5 + Instructor]
-    E4B --> E4C[🧹 Clean Text Formatting<br/>Fix Concatenated Words]
-    E4C --> E4D[📊 Build Anomaly Report<br/>Markdown Format]
-    E4D --> E4E[💾 Save Report<br/>reports/ directory]
+    E4B --> E4C[📊 Build Anomaly Report<br/>Markdown Format]
+    E4C --> E4D[💾 Store in State]
+    
+    %% Agent 5: Report Formatting
+    E5 --> E5A[✨ For Each Explanation]
+    E5A --> E5B[🔧 Fix Text Spacing<br/>GPT-4o-mini]
+    E5B --> E5C[📝 Clean Concatenations<br/>Format Numbers & Text]
+    E5C --> E5D[💾 Update Formatted Explanations]
     
     %% Cost Tracking
     E4B --> CT1[💰 Track API Costs<br/>Input/Output Tokens]
+    E5B --> CT1
     CT1 --> CT2[📊 Calculate Costs<br/>Per Model Pricing]
     CT2 --> CT3[💾 Save Cost Report<br/>JSON Format]
     
     %% Output Generation
-    E4E --> F1[📄 Generate Final Report<br/>Markdown + Executive Summary]
+    E5D --> F1[📄 Generate Final Report<br/>Markdown + Executive Summary]
     F1 --> F2[💾 Save to reports/<br/>anomaly_report_YYYY-MM_timestamp.md]
     F2 --> F3[📊 Print Cost Summary<br/>Console Output]
     F3 --> F4[✅ Analysis Complete]
@@ -233,8 +240,14 @@ flowchart TD
 #### Agent 4: Report Generation
 - **Purpose**: Generate detailed explanations and recommendations
 - **Method**: GPT-4/4o/5 with structured outputs
-- **Output**: Professional markdown reports
+- **Output**: Professional analysis with root cause and recommendations
 - **Cost**: $0.001 - $0.50 (main cost driver)
+
+#### Agent 5: Report Formatting
+- **Purpose**: Fix text spacing and concatenation issues
+- **Method**: GPT-4o-mini for cost-effective post-processing
+- **Output**: Clean, properly formatted markdown reports
+- **Cost**: ~$0.0001 - $0.001 (minimal, using GPT-4o-mini)
 
 ## 📊 Performance Metrics
 

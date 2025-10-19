@@ -1,6 +1,6 @@
 """
 LangGraph Workflow for Financial P&L Anomaly Detection
-Orchestrates 4 specialized agents in sequence with state management
+Orchestrates 5 specialized agents in sequence with state management
 """
 
 from langgraph.graph import StateGraph, END, START
@@ -31,7 +31,7 @@ class FinancialAnomalyWorkflow:
     def _build_graph(self) -> StateGraph:
         """
         Build LangGraph workflow:
-        START → Ingest → Detect → Retrieve → Report → END
+        START → Ingest → Detect → Retrieve → Report → Format → END
         """
         logger.info("🔨 Building LangGraph workflow...")
         
@@ -43,13 +43,15 @@ class FinancialAnomalyWorkflow:
         workflow.add_node("detect", self.agents.detect_anomalies)
         workflow.add_node("retrieve", self.agents.retrieve_context)
         workflow.add_node("report", self.agents.generate_explanations)
+        workflow.add_node("format", self.agents.format_report)
         
         # Add edges (workflow sequence)
         workflow.add_edge(START, "ingest")
         workflow.add_edge("ingest", "detect")
         workflow.add_edge("detect", "retrieve")
         workflow.add_edge("retrieve", "report")
-        workflow.add_edge("report", END)
+        workflow.add_edge("report", "format")
+        workflow.add_edge("format", END)
         
         logger.info("✅ LangGraph workflow built")
         

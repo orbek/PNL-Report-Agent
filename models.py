@@ -184,22 +184,18 @@ class AnomalyExplanation(BaseModel):
 **Current Month ({self.anomaly.current_month})**: ${self.anomaly.current_balance:,.2f}  
 **Previous Month ({self.anomaly.previous_month})**: ${self.anomaly.previous_balance:,.2f}
 
-**Root Cause Analysis**:
-
+**Root Cause Analysis**:  
 {self.reasoning.root_cause}
 
-**Detailed Reasoning**:
-
+**Detailed Reasoning**:  
 {self.reasoning.chain_of_thought}
 
 **Expected vs. Anomalous**: {"Expected variance (seasonal/one-time)" if self.reasoning.is_expected_variance else "True anomaly - requires investigation"}
 
-**Supporting Evidence**:
-
+**Supporting Evidence**:  
 {evidence_list}
 
-**Recommendation**:
-
+**Recommendation**:  
 {self.reasoning.recommendation}
 
 **Confidence**: {self.reasoning.confidence:.1%}{attention_flag}

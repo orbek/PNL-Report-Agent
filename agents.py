@@ -1,6 +1,6 @@
 """
 Core Agent Implementations for Financial P&L Anomaly Detection
-4 Specialized Agents: Ingestion → Detection → Retrieval → Reporting
+5 Specialized Agents: Ingestion → Detection → Retrieval → Reporting → Formatting
 """
 
 import pandas as pd
@@ -8,7 +8,6 @@ from openai import OpenAI
 from typing import List, Optional
 import logging
 import time
-import re
 
 try:
     import instructor
@@ -35,91 +34,6 @@ logger = logging.getLogger(__name__)
 class FinancialAgents:
     """Collection of specialized agents for financial analysis"""
     
-    # Class-level constants for text cleaning (ordered by length descending)
-    # Note: Patterns are applied in order, so longer patterns must come first
-    # to prevent shorter patterns from matching parts of longer concatenations.
-    # The \b word boundaries handle spacing automatically, so replacements
-    # don't need leading/trailing spaces.
-    TEXT_CONCATENATION_PATTERNS = (
-        # === Multi-word Financial Phrases (20+ chars) ===
-        (r'\baccounthasbeenflagged\b', 'account has been flagged'),
-        (r'\btypicalmonthlyrangeof\b', 'typical monthly range of'),
-        (r'\bisalsowellabovethe\b', 'is also well above the'),
-        (r'\bisalsowellbelowthe\b', 'is also well below the'),
-        
-        # === Financial Comparisons (15-19 chars) ===
-        (r'\bsignificantlyhigher\b', 'significantly higher'),
-        (r'\bsignificantlylower\b', 'significantly lower'),
-        (r'\biswellabovethe\b', 'is well above the'),
-        (r'\biswellbelowthe\b', 'is well below the'),
-        (r'\bisalsoabovethe\b', 'is also above the'),
-        (r'\bisalsobelowthe\b', 'is also below the'),
-        
-        # === Verb + Auxiliary Phrases (12-14 chars) ===
-        (r'\bhasbeenflagged\b', 'has been flagged'),
-        (r'\btypicallyranges\b', 'typically ranges'),
-        (r'\btypicallyvaries\b', 'typically varies'),
-        (r'\btypicallyshows\b', 'typically shows'),
-        (r'\bmonthlyrangeof\b', 'monthly range of'),
-        (r'\busuallyranges\b', 'usually ranges'),
-        (r'\busuallyshows\b', 'usually shows'),
-        (r'\bnotablyhigher\b', 'notably higher'),
-        (r'\bnotablylower\b', 'notably lower'),
-        (r'\bsignificantlyhas\b', 'significantly has'),
-        (r'\bsignificantlyis\b', 'significantly is'),
-        (r'\bthetransaction\b', 'the transaction'),
-        (r'\bthethreshold\b', 'the threshold'),
-        
-        # === Article + Noun Combinations (11-12 chars) ===
-        (r'\btheanalysis\b', 'the analysis'),
-        (r'\btypicalrange\b', 'typical range'),
-        (r'\bthevariance\b', 'the variance'),
-        (r'\bthebalance\b', 'the balance'),
-        (r'\btheexpense\b', 'the expense'),
-        (r'\btheaccount\b', 'the account'),
-        (r'\basignificant\b', 'a significant'),
-        
-        # === Verb + Object Patterns (10-11 chars) ===
-        (r'\bisabovethe\b', 'is above the'),
-        (r'\bisbelowthe\b', 'is below the'),
-        (r'\baccounthas\b', 'account has'),
-        (r'\baccountis\b', 'account is'),
-        (r'\bbalancehas\b', 'balance has'),
-        (r'\bbalanceis\b', 'balance is'),
-        (r'\bvariancehas\b', 'variance has'),
-        (r'\bvarianceis\b', 'variance is'),
-        (r'\bnotablyhas\b', 'notably has'),
-        (r'\bnotablyis\b', 'notably is'),
-        (r'\bwellabove\b', 'well above'),
-        (r'\bwellbelow\b', 'well below'),
-        (r'\bwellwithin\b', 'well within'),
-        (r'\bwelloutside\b', 'well outside'),
-        
-        # === Short Article + Noun (8-9 chars) ===
-        (r'\brasimilar\b', 'a similar'),
-        (r'\bthemonth\b', 'the month'),
-        (r'\btheamount\b', 'the amount'),
-        (r'\brasingle\b', 'a single'),
-        (r'\brangeof\b', 'range of'),
-        (r'\bhasbeen\b', 'has been'),
-        (r'\balarge\b', 'a large'),
-        (r'\basmall\b', 'a small'),
-        (r'\bisalso\b', 'is also'),
-        (r'\biswell\b', 'is well'),
-        (r'\btheyear\b', 'the year'),
-        
-        # === Preposition + Article (5-7 chars) ===
-        (r'\bfromthe\b', 'from the'),
-        (r'\bwiththe\b', 'with the'),
-        (r'\binthe\b', 'in the'),
-        (r'\btothe\b', 'to the'),
-        (r'\bofthe\b', 'of the'),
-        (r'\batthe\b', 'at the'),
-        (r'\bforthe\b', 'for the'),
-        (r'\bonthe\b', 'on the'),
-        (r'\bbythe\b', 'by the'),
-    )
-    
     def __init__(self, model: str = None, cost_tracker: Optional[CostTracker] = None):
         self.model = model or Config.DEFAULT_MODEL
         self.cost_tracker = cost_tracker
@@ -129,12 +43,6 @@ class FinancialAgents:
         self.openai_client = OpenAI(api_key=Config.OPENAI_API_KEY)
         # Initialize rate limiter (60 calls/min, 1000 calls/hour)
         self.rate_limiter = RateLimiter(max_calls_per_minute=60, max_calls_per_hour=1000)
-        
-        # Pre-compile regex patterns for better performance
-        self._compiled_patterns = [
-            (re.compile(pattern, re.IGNORECASE), replacement) 
-            for pattern, replacement in self.TEXT_CONCATENATION_PATTERNS
-        ]
     
     # ========================================================================
     # AGENT 1: Data Ingestion & Structuring
@@ -495,30 +403,172 @@ Use accounting terminology. Be concise but thorough.
             }
     
     # ========================================================================
+    # AGENT 5: Report Formatting & Text Cleanup
+    # ========================================================================
+    
+    def format_report(self, state: FinancialAnalysisState) -> FinancialAnalysisState:
+        """
+        Agent 5: Fix any spacing, formatting, or text concatenation issues in generated explanations
+        Uses GPT-4o-mini for cost-effective post-processing
+        """
+        logger.info("✨ Agent 5: Starting report formatting...")
+        
+        try:
+            # Use GPT-4o-mini for cost-effective formatting
+            format_config = Config.get_llm_config("formatting", "gpt-4o-mini")
+            
+            formatted_explanations = []
+            
+            for explanation in state["explanations"]:
+                # Track API call timing
+                start_time = time.time()
+                
+                # Apply rate limiting
+                self.rate_limiter.wait_if_needed()
+                
+                # Create formatting prompt
+                formatting_prompt = f"""
+Fix any text spacing, concatenation, or formatting issues in the following financial analysis text.
+
+RULES:
+1. Add proper spaces between concatenated words (e.g., "accounthas" → "account has")
+2. Fix number-word concatenations (e.g., "$8,500.00is" → "$8,500.00 is")
+3. Ensure proper spacing around punctuation
+4. Keep all numbers, percentages, and financial data exactly as they are
+5. Maintain the professional tone and technical accuracy
+6. Do NOT change the meaning or content, only fix spacing/formatting
+
+TEXT TO FIX:
+
+**Root Cause**: {explanation.reasoning.root_cause}
+
+**Chain of Thought**: {explanation.reasoning.chain_of_thought}
+
+**Recommendation**: {explanation.reasoning.recommendation}
+
+**Supporting Evidence**: {', '.join(explanation.reasoning.supporting_evidence) if explanation.reasoning.supporting_evidence else 'None'}
+
+Return the corrected text in the same format, maintaining the structure but with proper spacing.
+"""
+                
+                # Call GPT-4o-mini to fix formatting
+                response = self.openai_client.chat.completions.create(
+                    model=format_config["model"],
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are a text formatting specialist. Fix spacing and concatenation issues in financial text while preserving all data and meaning. Return only the corrected text in the same format."
+                        },
+                        {
+                            "role": "user",
+                            "content": formatting_prompt
+                        }
+                    ],
+                    temperature=format_config["temperature"],
+                    max_tokens=format_config["max_tokens"]
+                )
+                
+                # Parse the formatted response
+                formatted_text = response.choices[0].message.content.strip()
+                
+                # Extract the formatted sections (simple parsing)
+                import re
+                
+                # Extract each section
+                root_cause_match = re.search(r'\*\*Root Cause\*\*:\s*(.+?)(?=\n\*\*|$)', formatted_text, re.DOTALL)
+                chain_match = re.search(r'\*\*Chain of Thought\*\*:\s*(.+?)(?=\n\*\*|$)', formatted_text, re.DOTALL)
+                recommendation_match = re.search(r'\*\*Recommendation\*\*:\s*(.+?)(?=\n\*\*|$)', formatted_text, re.DOTALL)
+                evidence_match = re.search(r'\*\*Supporting Evidence\*\*:\s*(.+?)(?=\n\*\*|$)', formatted_text, re.DOTALL)
+                
+                # Update the reasoning with formatted text
+                if root_cause_match:
+                    explanation.reasoning.root_cause = root_cause_match.group(1).strip()
+                if chain_match:
+                    explanation.reasoning.chain_of_thought = chain_match.group(1).strip()
+                if recommendation_match:
+                    explanation.reasoning.recommendation = recommendation_match.group(1).strip()
+                if evidence_match:
+                    evidence_text = evidence_match.group(1).strip()
+                    if evidence_text and evidence_text.lower() != 'none':
+                        # Parse comma-separated evidence
+                        explanation.reasoning.supporting_evidence = [e.strip() for e in evidence_text.split(',')]
+                
+                formatted_explanations.append(explanation)
+                
+                # Calculate call duration
+                call_duration = time.time() - start_time
+                
+                # Track cost
+                if self.cost_tracker:
+                    usage = response.usage
+                    query_preview = f"Format text for GL Account {explanation.anomaly.gl_account_id}"
+                    
+                    self.cost_tracker.track_call(
+                        model=format_config["model"],
+                        agent="formatting",
+                        input_tokens=usage.prompt_tokens,
+                        output_tokens=usage.completion_tokens,
+                        call_duration=call_duration,
+                        query_preview=query_preview
+                    )
+                
+                logger.info(f"✅ Formatted explanation for {explanation.anomaly.gl_account_id}")
+            
+            logger.info(f"✅ Agent 5 complete: Formatted {len(formatted_explanations)} explanations")
+            
+            return {
+                **state,
+                "explanations": formatted_explanations,
+                "current_step": "formatting_complete"
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Agent 5 failed: {e}")
+            # If formatting fails, return original explanations
+            logger.warning("⚠️  Formatting failed, using original explanations")
+            return {
+                **state,
+                "current_step": "formatting_failed"
+            }
+    
+    # ========================================================================
     # Helper Methods
     # ========================================================================
     
     def clean_text_spacing(self, text: str) -> str:
         """Clean up concatenated text by adding proper spaces"""
+        import re
+        
+        # Fix concatenated phrases in order (most specific first)
+        # Common financial phrases
+        text = re.sub(r'isalsowellabovethe', ' is also well above the ', text)
+        text = re.sub(r'isalsowellbelowthe', ' is also well below the ', text)
+        text = re.sub(r'iswellabovethe', ' is well above the ', text)
+        text = re.sub(r'iswellbelowthe', ' is well below the ', text)
+        text = re.sub(r'isalsoabovethe', ' is also above the ', text)
+        text = re.sub(r'isalsobelowthe', ' is also below the ', text)
+        text = re.sub(r'isabovethe', ' is above the ', text)
+        text = re.sub(r'isbelowthe', ' is below the ', text)
+        text = re.sub(r'typicalmonthlyrangeof', ' typical monthly range of ', text)
+        text = re.sub(r'monthlyrangeof', ' monthly range of ', text)
+        text = re.sub(r'typicalrange', ' typical range', text)
+        text = re.sub(r'rangeof', ' range of ', text)
+        
+        # Common concatenated words
+        text = re.sub(r'isalso', ' is also ', text)
+        text = re.sub(r'iswell', ' is well ', text)
+        text = re.sub(r'wellabove', ' well above ', text)
+        text = re.sub(r'wellbelow', ' well below ', text)
+        text = re.sub(r'wellwithin', ' well within ', text)
+        text = re.sub(r'welloutside', ' well outside ', text)
+        
         # Number followed by word without space (e.g., "8,500.00is" -> "8,500.00 is")
         text = re.sub(r'(\d+(?:,\d{3})*(?:\.\d{2})?)([a-zA-Z])', r'\1 \2', text)
         
         # Word followed by number without space
         text = re.sub(r'([a-zA-Z])(\d+(?:,\d{3})*(?:\.\d{2})?)', r'\1 \2', text)
         
-        # Fix preposition + $ (e.g., "to$" -> "to $", "from$" -> "from $")
-        text = re.sub(r'\b(to|from|of|at|by|for|with)\$', r'\1 $', text)
-        
-        # camelCase (the, a, an followed by capital letter)
-        text = re.sub(r'\bthe([A-Z][a-z]+)', r'the \1', text)  # camelCase: theAccount
-        text = re.sub(r'\ba([A-Z][a-z]+)', r'a \1', text)  # camelCase: aSignificant
-        text = re.sub(r'\ban([A-Z][a-z]+)', r'an \1', text)  # camelCase: anAccount
-        
-        # Apply pre-compiled concatenation patterns (ordered by length descending)
-        for compiled_pattern, replacement in self._compiled_patterns:
-            text = compiled_pattern.sub(replacement, text)
-        
-        # camelCase (but be careful not to split abbreviations)
+        # camelCase
         text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
         
         # Fix specific financial terms (keep together)
@@ -594,4 +644,10 @@ def reporting_agent(state: FinancialAnalysisState) -> FinancialAnalysisState:
     """LangGraph node: Explanation generation"""
     agents = FinancialAgents()
     return agents.generate_explanations(state)
+
+
+def formatting_agent(state: FinancialAnalysisState) -> FinancialAnalysisState:
+    """LangGraph node: Report formatting and text cleanup"""
+    agents = FinancialAgents()
+    return agents.format_report(state)
 

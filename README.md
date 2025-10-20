@@ -92,7 +92,7 @@ python main.py analyze data/pl_historical.csv --month 2025-03 --model gpt-4o
 
 ## 🏗️ Agent Architecture
 
-The system uses a **5-Agent LangGraph Workflow**:
+The system uses a **4-Agent LangGraph Workflow** (Agent 5 currently disabled):
 
 ### System Architecture Flowchart
 
@@ -119,12 +119,12 @@ flowchart TD
     D2 --> D3[💰 Initialize Cost Tracker]
     D3 --> D4[🔄 Execute LangGraph Workflow]
     
-    %% LangGraph Workflow - 5 Agents
+    %% LangGraph Workflow - 4 Active Agents (Agent 5 Disabled)
     D4 --> E1[🤖 Agent 1: Data Ingestion]
     E1 --> E2[🤖 Agent 2: Anomaly Detection]
     E2 --> E3[🤖 Agent 3: Context Retrieval]
     E3 --> E4[🤖 Agent 4: Report Generation]
-    E4 --> E5[🤖 Agent 5: Report Formatting]
+    E4 --> E5[🤖 Agent 5: Report Formatting<br/>⚠️ DISABLED]
     
     %% Agent 1: Data Ingestion
     E1 --> E1A[📂 Load P&L CSV<br/>pandas.read_csv]
@@ -152,20 +152,20 @@ flowchart TD
     E4B --> E4C[📊 Build Anomaly Report<br/>Markdown Format]
     E4C --> E4D[💾 Store in State]
     
-    %% Agent 5: Report Formatting
-    E5 --> E5A[✨ For Each Explanation]
-    E5A --> E5B[🔧 Fix Text Spacing<br/>GPT-4o-mini]
-    E5B --> E5C[📝 Clean Concatenations<br/>Format Numbers & Text]
-    E5C --> E5D[💾 Update Formatted Explanations]
+    %% Agent 5: Report Formatting (DISABLED)
+    E5 -.-> E5A[✨ For Each Explanation<br/>⚠️ DISABLED]
+    E5A -.-> E5B[🔧 Fix Text Spacing<br/>GPT-4o-mini<br/>⚠️ DISABLED]
+    E5B -.-> E5C[📝 Clean Concatenations<br/>Format Numbers & Text<br/>⚠️ DISABLED]
+    E5C -.-> E5D[💾 Update Formatted Explanations<br/>⚠️ DISABLED]
     
     %% Cost Tracking
     E4B --> CT1[💰 Track API Costs<br/>Input/Output Tokens]
-    E5B --> CT1
+    E5B -.-> CT1
     CT1 --> CT2[📊 Calculate Costs<br/>Per Model Pricing]
     CT2 --> CT3[💾 Save Cost Report<br/>JSON Format]
     
-    %% Output Generation
-    E5D --> F1[📄 Generate Final Report<br/>Markdown + Executive Summary]
+    %% Output Generation (Agent 4 goes directly to output)
+    E4D --> F1[📄 Generate Final Report<br/>Markdown + Executive Summary]
     F1 --> F2[💾 Save to reports/<br/>anomaly_report_YYYY-MM_timestamp.md]
     F2 --> F3[📊 Print Cost Summary<br/>Console Output]
     F3 --> F4[✅ Analysis Complete]
@@ -207,11 +207,13 @@ flowchart TD
     
     %% Styling
     classDef agentClass fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef disabledClass fill:#f5f5f5,stroke:#9e9e9e,stroke-width:2px,stroke-dasharray: 5 5
     classDef dataClass fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
     classDef aiClass fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
     classDef costClass fill:#fff3e0,stroke:#e65100,stroke-width:2px
     
     class E1,E2,E3,E4 agentClass
+    class E5 disabledClass
     class DB,VS,FS dataClass
     class GPT4,EMB,INST aiClass
     class CT,PRICING,REPORTS costClass
@@ -243,11 +245,66 @@ flowchart TD
 - **Output**: Professional analysis with root cause and recommendations
 - **Cost**: $0.001 - $0.50 (main cost driver)
 
-#### Agent 5: Report Formatting
+#### Agent 5: Report Formatting ⚠️ **CURRENTLY DISABLED**
 - **Purpose**: Fix text spacing and concatenation issues
 - **Method**: GPT-4o-mini for cost-effective post-processing
 - **Output**: Clean, properly formatted markdown reports
 - **Cost**: ~$0.0001 - $0.001 (minimal, using GPT-4o-mini)
+- **Status**: **DISABLED** - Currency formatting is now handled directly by Agent 4
+
+### 🔧 Agent 5 Management
+
+Agent 5 (Report Formatting) is currently **disabled** because currency formatting issues have been resolved by enhancing Agent 4's capabilities. However, you can easily reactivate it if needed.
+
+#### To Reactivate Agent 5:
+
+**Option 1: Use the Toggle Script (Recommended)**
+```bash
+# Check current status
+python toggle_agent5.py status
+
+# Enable Agent 5
+python toggle_agent5.py enable
+
+# Disable Agent 5
+python toggle_agent5.py disable
+```
+
+**Option 2: Manual Edit**
+1. **Edit `workflow.py`**:
+   ```python
+   # Uncomment these lines (around line 45-50):
+   workflow.add_node("format", self.agents.format_report)
+   
+   # Uncomment these lines (around line 55-60):
+   workflow.add_edge("report", "format")
+   workflow.add_edge("format", END)
+   
+   # Comment out this line:
+   # workflow.add_edge("report", END)  # Skip formatting step
+   ```
+
+2. **Edit `agents.py`** (if needed):
+   - The `format_report` method is still available
+   - No changes required to the agent implementation
+
+3. **Restart the system**:
+   ```bash
+   python main.py analyze data/pl_reports/pl_2025-11.csv --month 2025-11
+   ```
+
+#### Why Agent 5 Was Disabled:
+
+- **Currency Formatting**: All dollar sign escaping (`\$`) is now handled by Agent 4
+- **Performance**: Eliminates an extra LLM call, reducing cost and latency
+- **Reliability**: Reduces potential formatting inconsistencies
+- **Simplicity**: Single-agent formatting is more maintainable
+
+#### When to Reactivate Agent 5:
+
+- If you encounter new formatting issues that Agent 4 cannot handle
+- If you need additional text processing capabilities
+- If you want to experiment with different formatting approaches
 
 ## 📊 Performance Metrics
 
@@ -353,6 +410,7 @@ PNL Agent/
 ├── cost_tracker.py        # Cost tracking system
 ├── sample_data_generator.py # Sample data creation
 ├── generate_november_data.py # November 2025 data
+├── toggle_agent5.py       # Agent 5 enable/disable utility
 ├── setup.sh              # Automated setup script
 ├── requirements.txt       # Python dependencies
 ├── .env.example          # Environment template

@@ -154,7 +154,7 @@ class FinancialReasoning(BaseModel):
     root_cause: str = Field(..., description="Primary cause of variance")
     is_expected_variance: bool = Field(..., description="Is this expected or truly anomalous?")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score (0-1)")
-    supporting_evidence: List[str] = Field(default_factory=list, description="Data points supporting analysis")
+    supporting_evidence: List[str] = Field(default_factory=list, description="Data points supporting analysis. Each item must be complete on a single line with proper currency formatting (e.g., 'Current Month Amount: \\$15,000.00'). NEVER split currency amounts across multiple lines. Use proper comma separators and escaped dollar signs.")
     recommendation: str = Field(..., description="Recommended action")
     requires_immediate_attention: bool = Field(..., description="Needs urgent review?")
 
@@ -166,13 +166,111 @@ class AnomalyExplanation(BaseModel):
     retrieved_context: GLContext
     investigation_timestamp: datetime = Field(default_factory=lambda: datetime.now())
     
+    def _format_currency_in_text(self, text: str) -> str:
+        """Fix currency formatting issues in text"""
+        import re
+        
+        # First, normalize any double-escaped dollar signs to single-escaped
+        text = re.sub(r'\\\\\\$', r'\\$', text)
+        
+        # Comprehensive replacement: replace ALL unescaped dollar signs with escaped ones
+        # This handles cases like: $15,000.00, $+14,916.95, $23,500.00, etc.
+        text = re.sub(r'(?<!\\)\$', r'\\$', text)
+        
+        # Fix currency amounts that might be split across lines or missing commas
+        currency_patterns = [
+            r'\\$(\d{1,3}(?:\s+\d{3})*(?:\.\d{2})?)',  # \$35000.00 or \$35 000.00
+            r'\\$(\d{1,3})\n\s*(\d{3})\.(\d{2})',  # \$35\n000.00 (line break before decimal)
+            r'\\$(\d{1,3})\n\s*(\d{3})\n\s*(\d{2})',  # \$35\n000\n00 (multiple line breaks)
+            r'\\$(\d{1,3})\n\s*(\d{3})',  # \$35\n000 (line break in middle)
+            r'(\d{1,3})\n\s*(\d{3})\.(\d{2})',  # 35\n000.00 (missing $ at start)
+            r'(\d{1,3})\n\s*(\d{3})\n\s*(\d{2})',  # 35\n000\n00 (missing $ at start, multiple breaks)
+        ]
+        
+        def fix_currency(match):
+            groups = match.groups()
+            if len(groups) == 1:
+                # Single group - clean up spaces
+                amount = groups[0].replace(' ', '').replace('\n', '')
+                if len(amount) > 3:
+                    # Split into integer and decimal parts
+                    if '.' in amount:
+                        int_part, dec_part = amount.split('.')
+                    else:
+                        int_part, dec_part = amount, '00'
+                    
+                    # Add commas to integer part
+                    int_part_with_commas = f"{int(int_part):,}"
+                    return f"\\${int_part_with_commas}.{dec_part}"
+                return f"\\${amount}"
+            elif len(groups) == 2:
+                # Two groups - reconstruct amount
+                amount_str = ''.join(groups).replace(' ', '').replace('\n', '')
+                return f"\\${int(amount_str):,}" if '.' not in amount_str else f"\\${float(amount_str):,.2f}"
+            else:
+                # Three groups - reconstruct amount with decimal
+                amount_str = ''.join(groups).replace(' ', '').replace('\n', '')
+                return f"\\${float(amount_str):,.2f}"
+        
+        for pattern in currency_patterns:
+            text = re.sub(pattern, fix_currency, text, flags=re.MULTILINE)
+        
+        return text
+    
     def to_report_section(self) -> str:
         """Format as report section with proper markdown"""
         direction_symbol = "📈" if self.anomaly.direction == "increase" else "📉"
         severity_emoji = {"high": "🔴", "medium": "🟡", "low": "🟢"}[self.anomaly.severity.value]
         
-        # Format supporting evidence
-        evidence_list = "\n".join(f"- {evidence}" for evidence in self.reasoning.supporting_evidence) if self.reasoning.supporting_evidence else "- Analysis based on variance data and GL documentation"
+        # Format supporting evidence with currency fixing
+        if self.reasoning.supporting_evidence:
+            formatted_evidence = []
+            for evidence in self.reasoning.supporting_evidence:
+                # Fix currency formatting in each evidence item
+                fixed_evidence = self._format_currency_in_text(evidence)
+                formatted_evidence.append(fixed_evidence)
+            
+            # Additional fix for split currency amounts in list items
+            fixed_evidence = []
+            i = 0
+            while i < len(formatted_evidence):
+                current_item = formatted_evidence[i]
+                
+                # Check if this item ends with a partial currency amount
+                if (current_item.endswith('\\$') or 
+                    (current_item.endswith('\\$') and current_item[-1].isdigit()) or
+                    (i + 1 < len(formatted_evidence) and 
+                     formatted_evidence[i + 1].strip().startswith('-') and
+                     formatted_evidence[i + 1].strip()[1:].replace('.', '').isdigit())):
+                    
+                    # Look for the next item that might be a continuation
+                    if i + 1 < len(formatted_evidence):
+                        next_item = formatted_evidence[i + 1].strip()
+                        if next_item.startswith('-'):
+                            next_item = next_item[1:].strip()
+                        
+                        # If next item is just numbers/decimal, combine them
+                        if next_item.replace('.', '').isdigit():
+                            # Combine the amounts
+                            if current_item.endswith('\\$'):
+                                combined = current_item + next_item
+                            else:
+                                # Extract the dollar part and combine
+                                dollar_part = current_item.split('\\$')[-1] if '\\$' in current_item else current_item
+                                combined = current_item.replace(dollar_part, '') + '\\$' + dollar_part + next_item
+                            
+                            # Format the combined amount
+                            combined = self._format_currency_in_text(combined)
+                            fixed_evidence.append(combined)
+                            i += 2  # Skip both items
+                            continue
+                
+                fixed_evidence.append(current_item)
+                i += 1
+            
+            evidence_list = "\n".join(f"- {evidence}" for evidence in fixed_evidence)
+        else:
+            evidence_list = "- Analysis based on variance data and GL documentation"
         
         # Format attention flag
         attention_flag = "\n\n⚠️ **REQUIRES IMMEDIATE ATTENTION**\n" if self.reasoning.requires_immediate_attention else ""
@@ -180,25 +278,25 @@ class AnomalyExplanation(BaseModel):
         return f"""
 ### {severity_emoji} GL Account {self.anomaly.gl_account_id} - {self.anomaly.account_name}
 
-**Variance**: {direction_symbol} {self.anomaly.variance_percent:+.2f}% (${self.anomaly.variance_amount:+,.2f})  
-**Current Month ({self.anomaly.current_month})**: ${self.anomaly.current_balance:,.2f}  
-**Previous Month ({self.anomaly.previous_month})**: ${self.anomaly.previous_balance:,.2f}
+**Variance** : {direction_symbol} {self.anomaly.variance_percent:+.2f}% (\\${self.anomaly.variance_amount:+,.2f})  
+**Current Month ({self.anomaly.current_month})** : \\${self.anomaly.current_balance:,.2f}  
+**Previous Month ({self.anomaly.previous_month})** : \\${self.anomaly.previous_balance:,.2f}
 
-**Root Cause Analysis**:  
+**Root Cause Analysis** :  
 {self.reasoning.root_cause}
 
-**Detailed Reasoning**:  
+**Detailed Reasoning** :  
 {self.reasoning.chain_of_thought}
 
-**Expected vs. Anomalous**: {"Expected variance (seasonal/one-time)" if self.reasoning.is_expected_variance else "True anomaly - requires investigation"}
+**Expected vs. Anomalous** : {"Expected variance (seasonal/one-time)" if self.reasoning.is_expected_variance else "True anomaly - requires investigation"}
 
-**Supporting Evidence**:  
+**Supporting Evidence** :  
 {evidence_list}
 
-**Recommendation**:  
+**Recommendation** :  
 {self.reasoning.recommendation}
 
-**Confidence**: {self.reasoning.confidence:.1%}{attention_flag}
+**Confidence** : {self.reasoning.confidence:.1%}{attention_flag}
 
 ---
 

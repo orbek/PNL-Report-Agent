@@ -322,6 +322,20 @@ Analyze this GL account variance:
 
 **IMPORTANT**: Use proper spacing between all words and numbers. Do not concatenate text. Write clearly and professionally.
 
+**CRITICAL FORMATTING RULES**:
+- Currency amounts MUST stay on single lines (e.g., "\\$15,000.00" NOT "\\$15" on one line and "000.00" on next line)
+- Percentages MUST stay on single lines (e.g., "+17,961.41%" NOT "+17" on one line and "961.41%" on next line)
+- All supporting evidence items should be complete on single lines
+- Use proper comma separators for thousands in currency amounts
+- ALWAYS escape dollar signs with SINGLE backslashes (\\$) to prevent Markdown math interpretation
+- NEVER split currency amounts across multiple lines - keep entire amounts together
+- Example: "Current Month Amount: \\$15,000.00" NOT "Current Month Amount: \\$15" followed by "000.00" on next line
+- Each supporting evidence item must be a complete sentence on a single line
+- Do NOT break currency amounts into separate list items
+- Format ALL currency amounts with proper commas: \\$15,000.00, \\$1,500.00, \\$25,000.00
+- Ensure supporting evidence is formatted as complete sentences with proper currency formatting
+- Use SINGLE backslash before dollar signs: \\$ NOT \\\\$
+
 Use accounting terminology. Be concise but thorough.
 """
                         }
@@ -378,6 +392,18 @@ Use accounting terminology. Be concise but thorough.
                     reasoning=reasoning,
                     retrieved_context=gl_context
                 )
+                
+                # Post-process all reasoning fields to fix currency formatting issues
+                explanation.reasoning.chain_of_thought = self._fix_currency_formatting(explanation.reasoning.chain_of_thought)
+                explanation.reasoning.root_cause = self._fix_currency_formatting(explanation.reasoning.root_cause)
+                explanation.reasoning.recommendation = self._fix_currency_formatting(explanation.reasoning.recommendation)
+                
+                if explanation.reasoning.supporting_evidence:
+                    fixed_evidence = []
+                    for evidence in explanation.reasoning.supporting_evidence:
+                        # Apply currency formatting fix
+                        fixed_evidence.append(self._fix_currency_formatting(evidence))
+                    explanation.reasoning.supporting_evidence = fixed_evidence
                 
                 explanations.append(explanation)
                 
@@ -437,6 +463,12 @@ RULES:
 4. Keep all numbers, percentages, and financial data exactly as they are
 5. Maintain the professional tone and technical accuracy
 6. Do NOT change the meaning or content, only fix spacing/formatting
+7. CRITICAL: Fix currency amounts that are split across lines (e.g., "\\$35" on one line and "000.00" on next line should become "\\$35,000.00")
+8. Ensure currency amounts stay on single lines with proper comma separators
+9. Fix any line breaks within currency values or percentages
+10. ALWAYS escape dollar signs with backslashes (\\$) to prevent Markdown math interpretation
+11. Look for patterns like "\\$15" followed by "000.00" on separate lines and combine them into "\\$15,000.00"
+12. Fix patterns where currency amounts are split across multiple lines in supporting evidence
 
 TEXT TO FIX:
 
@@ -448,7 +480,7 @@ TEXT TO FIX:
 
 **Supporting Evidence**: {', '.join(explanation.reasoning.supporting_evidence) if explanation.reasoning.supporting_evidence else 'None'}
 
-Return the corrected text in the same format, maintaining the structure but with proper spacing.
+Return the corrected text in the same format, maintaining the structure but with proper spacing. Pay special attention to currency formatting and ensure all dollar amounts are properly formatted on single lines.
 """
                 
                 # Call GPT-4o-mini to fix formatting
@@ -480,18 +512,75 @@ Return the corrected text in the same format, maintaining the structure but with
                 recommendation_match = re.search(r'\*\*Recommendation\*\*:\s*(.+?)(?=\n\*\*|$)', formatted_text, re.DOTALL)
                 evidence_match = re.search(r'\*\*Supporting Evidence\*\*:\s*(.+?)(?=\n\*\*|$)', formatted_text, re.DOTALL)
                 
+                # Additional currency formatting fix for extracted evidence
+                def fix_currency_formatting(text):
+                    """Fix currency amounts that might be split across lines"""
+                    # Pattern to match currency amounts with potential line breaks
+                    currency_patterns = [
+                        r'\$\s*(\d{1,3}(?:\s+\d{3})*(?:\.\d{2})?)',  # $ 35000.00 or $ 35 000.00
+                        r'\$(\d{1,3})\s+(\d{3})\s+(\d{2})',  # $35 000 00 (split amounts)
+                        r'\$(\d{1,3})\s+(\d{3})\.(\d{2})',  # $35 000.00 (space before decimal)
+                        r'\$(\d{1,3})\n\s*(\d{3})\.(\d{2})',  # $35\n000.00 (line break before decimal)
+                        r'\$(\d{1,3})\n\s*(\d{3})\n\s*(\d{2})',  # $35\n000\n00 (multiple line breaks)
+                        r'\$(\d{1,3})\n\s*(\d{3})',  # $35\n000 (line break in middle)
+                        r'(\d{1,3})\n\s*(\d{3})\.(\d{2})',  # 35\n000.00 (missing $ at start)
+                        r'(\d{1,3})\n\s*(\d{3})\n\s*(\d{2})',  # 35\n000\n00 (missing $ at start, multiple breaks)
+                        r'\\\\\\$(\d{1,3})\n\s*(\d{3})\.(\d{2})',  # \\$15\n000.00 (escaped $ with line break)
+                        r'\\\\\\$(\d{1,3})\n\s*(\d{3})\n\s*(\d{2})',  # \\$15\n000\n00 (escaped $ with multiple breaks)
+                        r'\\\\\\$(\d{1,3})\n\s*(\d{3})',  # \\$15\n000 (escaped $ with line break)
+                    ]
+                    
+                    for pattern in currency_patterns:
+                        def fix_match(match):
+                            groups = match.groups()
+                            if len(groups) == 1:
+                                # Single group - clean up spaces
+                                amount = groups[0].replace(' ', '').replace('\n', '')
+                                return f"\\${int(amount):,}" if '.' not in amount else f"\\${float(amount):,.2f}"
+                            elif len(groups) == 2:
+                                # Two groups - reconstruct amount
+                                amount_str = ''.join(groups).replace(' ', '').replace('\n', '')
+                                return f"\\${int(amount_str):,}" if '.' not in amount_str else f"\\${float(amount_str):,.2f}"
+                            else:
+                                # Three groups - reconstruct amount with decimal
+                                amount_str = ''.join(groups).replace(' ', '').replace('\n', '')
+                                return f"\\${float(amount_str):,.2f}"
+                        
+                        text = re.sub(pattern, fix_match, text, flags=re.MULTILINE)
+                    
+                    # Additional fix for percentages with line breaks
+                    percent_patterns = [
+                        r'(\+?\d{1,3})\n\s*(\d{3})\.(\d{2})%',  # +17\n961.41%
+                        r'(\+?\d{1,3})\n\s*(\d{3})\n\s*(\d{2})%',  # +17\n961\n41%
+                    ]
+                    
+                    for pattern in percent_patterns:
+                        def fix_percent_match(match):
+                            groups = match.groups()
+                            percent_str = ''.join(groups).replace(' ', '').replace('\n', '')
+                            return f"{percent_str}%"
+                        
+                        text = re.sub(pattern, fix_percent_match, text, flags=re.MULTILINE)
+                    
+                    return text
+                
                 # Update the reasoning with formatted text
                 if root_cause_match:
-                    explanation.reasoning.root_cause = root_cause_match.group(1).strip()
+                    explanation.reasoning.root_cause = fix_currency_formatting(root_cause_match.group(1).strip())
                 if chain_match:
-                    explanation.reasoning.chain_of_thought = chain_match.group(1).strip()
+                    explanation.reasoning.chain_of_thought = fix_currency_formatting(chain_match.group(1).strip())
                 if recommendation_match:
-                    explanation.reasoning.recommendation = recommendation_match.group(1).strip()
+                    explanation.reasoning.recommendation = fix_currency_formatting(recommendation_match.group(1).strip())
                 if evidence_match:
                     evidence_text = evidence_match.group(1).strip()
                     if evidence_text and evidence_text.lower() != 'none':
-                        # Parse comma-separated evidence
-                        explanation.reasoning.supporting_evidence = [e.strip() for e in evidence_text.split(',')]
+                        # Fix split currency amounts before parsing
+                        # Pattern: "\\$15\n- 000.00" -> "\\$15,000.00"
+                        evidence_text = re.sub(r'\\\\\\$(\d+)\n\s*-\s*(\d+\.\d+)', r'\\\\$\\1,\\2', evidence_text)
+                        evidence_text = re.sub(r'\\\\\\$(\d+)\n\s*(\d+\.\d+)', r'\\\\$\\1,\\2', evidence_text)
+                        
+                        # Parse comma-separated evidence and apply currency formatting
+                        explanation.reasoning.supporting_evidence = [fix_currency_formatting(e.strip()) for e in evidence_text.split(',')]
                 
                 formatted_explanations.append(explanation)
                 
@@ -579,6 +668,57 @@ Return the corrected text in the same format, maintaining the structure but with
         text = re.sub(r'\s+', ' ', text)
         
         return text.strip()
+    
+    def _fix_currency_formatting(self, text: str) -> str:
+        """Fix currency formatting issues in text"""
+        import re
+        
+        # First, normalize any double-escaped dollar signs to single-escaped
+        text = re.sub(r'\\\\\\$', r'\\$', text)
+        
+        # Comprehensive replacement: replace ALL unescaped dollar signs with escaped ones
+        # This handles cases like: $15,000.00, $+14,916.95, $23,500.00, etc.
+        text = re.sub(r'(?<!\\)\$', r'\\$', text)
+        
+        # Fix currency amounts that might be split across lines or missing commas
+        currency_patterns = [
+            r'\\$(\d{1,3}(?:\s+\d{3})*(?:\.\d{2})?)',  # \$35000.00 or \$35 000.00
+            r'\\$(\d{1,3})\n\s*(\d{3})\.(\d{2})',  # \$35\n000.00 (line break before decimal)
+            r'\\$(\d{1,3})\n\s*(\d{3})\n\s*(\d{2})',  # \$35\n000\n00 (multiple line breaks)
+            r'\\$(\d{1,3})\n\s*(\d{3})',  # \$35\n000 (line break in middle)
+            r'(\d{1,3})\n\s*(\d{3})\.(\d{2})',  # 35\n000.00 (missing $ at start)
+            r'(\d{1,3})\n\s*(\d{3})\n\s*(\d{2})',  # 35\n000\n00 (missing $ at start, multiple breaks)
+        ]
+        
+        def fix_currency(match):
+            groups = match.groups()
+            if len(groups) == 1:
+                # Single group - clean up spaces
+                amount = groups[0].replace(' ', '').replace('\n', '')
+                if len(amount) > 3:
+                    # Split into integer and decimal parts
+                    if '.' in amount:
+                        int_part, dec_part = amount.split('.')
+                    else:
+                        int_part, dec_part = amount, '00'
+                    
+                    # Add commas to integer part
+                    int_part_with_commas = f"{int(int_part):,}"
+                    return f"\\${int_part_with_commas}.{dec_part}"
+                return f"\\${amount}"
+            elif len(groups) == 2:
+                # Two groups - reconstruct amount
+                amount_str = ''.join(groups).replace(' ', '').replace('\n', '')
+                return f"\\${int(amount_str):,}" if '.' not in amount_str else f"\\${float(amount_str):,.2f}"
+            else:
+                # Three groups - reconstruct amount with decimal
+                amount_str = ''.join(groups).replace(' ', '').replace('\n', '')
+                return f"\\${float(amount_str):,.2f}"
+        
+        for pattern in currency_patterns:
+            text = re.sub(pattern, fix_currency, text, flags=re.MULTILINE)
+        
+        return text
     
     def validate_data_quality(self, df: pd.DataFrame, data_type: str) -> bool:
         """Validate CSV data quality before processing"""

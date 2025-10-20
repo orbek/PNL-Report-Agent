@@ -43,15 +43,16 @@ class FinancialAnomalyWorkflow:
         workflow.add_node("detect", self.agents.detect_anomalies)
         workflow.add_node("retrieve", self.agents.retrieve_context)
         workflow.add_node("report", self.agents.generate_explanations)
-        workflow.add_node("format", self.agents.format_report)
+        # workflow.add_node("format", self.agents.format_report)  # Temporarily disabled  # Temporarily disabled
         
         # Add edges (workflow sequence)
         workflow.add_edge(START, "ingest")
         workflow.add_edge("ingest", "detect")
         workflow.add_edge("detect", "retrieve")
         workflow.add_edge("retrieve", "report")
-        workflow.add_edge("report", "format")
-        workflow.add_edge("format", END)
+        workflow.add_edge("report", END)  # Skip formatting step
+        # workflow.add_edge("report", "format")  # Temporarily disabled  # Temporarily disabled
+        # workflow.add_edge("format", END)  # Temporarily disabled  # Temporarily disabled
         
         logger.info("✅ LangGraph workflow built")
         

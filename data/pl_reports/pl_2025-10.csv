@@ -1,28 +1,28 @@
 transaction_id,gl_account_id,date,amount,description,department,vendor
-TXN00340,7300,2025-10-18,2249.29,Monthly 7300 - October 2025,Operations,Vendor_7300
-TXN00341,8000,2025-10-18,15081.0,Monthly 8000 - October 2025,Operations,Vendor_8000
-TXN00342,8100,2025-10-18,4636.26,Monthly 8100 - October 2025,Operations,Vendor_8100
-TXN00343,8200,2025-10-18,464.1,Monthly 8200 - October 2025,Operations,Vendor_8200
-TXN00349,9500,2025-10-18,827.18,Monthly 9500 - October 2025,Operations,Vendor_9500
-TXN00345,9100,2025-10-18,4668.26,Monthly 9100 - October 2025,Operations,Vendor_9100
-TXN00346,9200,2025-10-18,18000.0,🟡 ANOMALY: Cybersecurity incident response - External consultants,Operations,Vendor_9200
-TXN00347,3000,2025-10-18,15187.34,Monthly 3000 - October 2025,Operations,Vendor_3000
-TXN00348,3100,2025-10-18,18000.0,🟡 ANOMALY: Traffic surge + infrastructure scaling,Operations,Vendor_3100
-TXN00339,7200,2025-10-18,8500.0,🟡 ANOMALY: Emergency HVAC replacement,Operations,Vendor_7200
-TXN00344,9000,2025-10-18,35000.0,🔴 ANOMALY: Emergency litigation costs - Contract dispute,Operations,Vendor_9000
-TXN00338,7100,2025-10-18,2177.75,Monthly 7100 - October 2025,Operations,Vendor_7100
-TXN00331,5300,2025-10-18,12000.0,🔴 ANOMALY: Annual policy renewal + D&O rider added,Operations,Vendor_5300
-TXN00336,6200,2025-10-18,45000.0,🔴 ANOMALY: Annual Industry Conference - Las Vegas (10 attendees),Operations,Vendor_6200
-TXN00335,5530,2025-10-18,4500.0,🔴 ANOMALY: Major contractor projects completed early,Operations,Vendor_5530
-TXN00334,5520,2025-10-18,17237.26,Monthly 5520 - October 2025,Operations,Vendor_5520
-TXN00333,5510,2025-10-18,12730.37,Monthly 5510 - October 2025,Operations,Vendor_5510
-TXN00332,5500,2025-10-18,108000.0,🟡 ANOMALY: Quarterly bonuses + 3 new hires,Operations,Vendor_5500
-TXN00330,5200,2025-10-18,9871.37,Monthly 5200 - October 2025,Operations,Vendor_5200
-TXN00329,5100,2025-10-18,1907.51,Monthly 5100 - October 2025,Operations,Vendor_5100
-TXN00328,5000,2025-10-18,18000.0,🔴 ANOMALY: Monthly Rent + Security Deposit (Lease Renewal),Operations,Vendor_5000
-TXN00327,4200,2025-10-18,6218.42,Monthly 4200 - October 2025,Operations,Vendor_4200
-TXN00326,4100,2025-10-18,18924.16,Monthly 4100 - October 2025,Operations,Vendor_4100
-TXN00325,4000,2025-10-18,48000.0,🟡 ANOMALY: Client churn - 3 major accounts lost,Operations,Vendor_4000
-TXN00350,9600,2025-10-18,3500.0,Monthly 9600 - October 2025,Operations,Vendor_9600
-TXN00337,6300,2025-10-18,1014.37,Monthly 6300 - October 2025,Operations,Vendor_6300
-TXN00351,9700,2025-10-18,1869.5,Monthly 9700 - October 2025,Operations,Vendor_9700
+TXN00340,7300,2025-10-19,2226.55,Monthly 7300 - October 2025,Operations,Vendor_7300
+TXN00341,8000,2025-10-19,15960.93,Monthly 8000 - October 2025,Operations,Vendor_8000
+TXN00342,8100,2025-10-19,5814.43,Monthly 8100 - October 2025,Operations,Vendor_8100
+TXN00343,8200,2025-10-19,517.42,Monthly 8200 - October 2025,Operations,Vendor_8200
+TXN00349,9500,2025-10-19,750.37,Monthly 9500 - October 2025,Operations,Vendor_9500
+TXN00345,9100,2025-10-19,2810.92,Monthly 9100 - October 2025,Operations,Vendor_9100
+TXN00346,9200,2025-10-19,18000.0,🟡 ANOMALY: Cybersecurity incident response - External consultants,Operations,Vendor_9200
+TXN00347,3000,2025-10-19,23593.48,Monthly 3000 - October 2025,Operations,Vendor_3000
+TXN00348,3100,2025-10-19,18000.0,🟡 ANOMALY: Traffic surge + infrastructure scaling,Operations,Vendor_3100
+TXN00339,7200,2025-10-19,8500.0,🟡 ANOMALY: Emergency HVAC replacement,Operations,Vendor_7200
+TXN00344,9000,2025-10-19,35000.0,🔴 ANOMALY: Emergency litigation costs - Contract dispute,Operations,Vendor_9000
+TXN00338,7100,2025-10-19,2498.28,Monthly 7100 - October 2025,Operations,Vendor_7100
+TXN00331,5300,2025-10-19,12000.0,🔴 ANOMALY: Annual policy renewal + D&O rider added,Operations,Vendor_5300
+TXN00336,6200,2025-10-19,45000.0,🔴 ANOMALY: Annual Industry Conference - Las Vegas (10 attendees),Operations,Vendor_6200
+TXN00335,5530,2025-10-19,4500.0,🔴 ANOMALY: Major contractor projects completed early,Operations,Vendor_5530
+TXN00334,5520,2025-10-19,16878.52,Monthly 5520 - October 2025,Operations,Vendor_5520
+TXN00333,5510,2025-10-19,12830.99,Monthly 5510 - October 2025,Operations,Vendor_5510
+TXN00332,5500,2025-10-19,108000.0,🟡 ANOMALY: Quarterly bonuses + 3 new hires,Operations,Vendor_5500
+TXN00330,5200,2025-10-19,9310.31,Monthly 5200 - October 2025,Operations,Vendor_5200
+TXN00329,5100,2025-10-19,2475.9,Monthly 5100 - October 2025,Operations,Vendor_5100
+TXN00328,5000,2025-10-19,18000.0,🔴 ANOMALY: Monthly Rent + Security Deposit (Lease Renewal),Operations,Vendor_5000
+TXN00327,4200,2025-10-19,9564.56,Monthly 4200 - October 2025,Operations,Vendor_4200
+TXN00326,4100,2025-10-19,28851.56,Monthly 4100 - October 2025,Operations,Vendor_4100
+TXN00325,4000,2025-10-19,48000.0,🟡 ANOMALY: Client churn - 3 major accounts lost,Operations,Vendor_4000
+TXN00350,9600,2025-10-19,3500.0,Monthly 9600 - October 2025,Operations,Vendor_9600
+TXN00337,6300,2025-10-19,2980.3,Monthly 6300 - October 2025,Operations,Vendor_6300
+TXN00351,9700,2025-10-19,83.05,Monthly 9700 - October 2025,Operations,Vendor_9700
